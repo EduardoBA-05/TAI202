@@ -2,6 +2,7 @@
 from fastapi import FastAPI, status, HTTPException
 import asyncio
 from typing import Optional
+from pydantic import BaseModel,Field
 
 #Instancia del servidor
 app = FastAPI(
@@ -10,12 +11,21 @@ app = FastAPI(
     version="1.0"
 )
 
+
 #TB ficticia
 usuarios=[
     {"id":1,"nombre":"Fany","edad":21},
     {"id":2,"nombre":"Aly","edad":21},
     {"id":3,"nombre":"Dulce","edad":21},
 ]
+
+#Modelo de Validación pydantic <----- creamos el modelo
+class crear_usuario(BaseModel):
+   #Con validaciones
+   id: int = Field(..., gt=0, description="Identificador de usuario (mayor que 0)") 
+   nombre: str = Field(..., min_length=3, max_length=50, example="Juanita")
+   edad: int = Field(..., ge=1, le=123, description="Edad válida entre 1 y 123 años")
+
 
 #Endpoints
 @app.get("/")
@@ -56,10 +66,10 @@ async def leer_usuarios():
     }
 
 # POST: Crea usuarios verificando primero que el id no esté en la BD
-@app.post("/v1/usuarios/", tags=['HTTP CRUD'])
-async def agregar_usuarios(usuario:dict):
-    for usr in usuarios: 
-        if usr ["id"] == usuario.get("id"):
+@app.post("/v1/usuarios/", tags=['HTTP CRUD'] ,status_code=status.HTTP_201_CREATED)
+async def crear_usuario(usuario:crear_usuario): #<------- usamos el modelo
+    for usr in usuarios:
+        if usr ["id"] == usuario.id: #<--- cambiamos por que ya no usamos dict
             raise HTTPException(
                 status_code=400,
                 detail= "El id ya existe"
